@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Hand Hub（デモ版）</title>
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html, body { margin: 0; padding: 0; background: #F5F6F3; color: #1C1F26; overscroll-behavior-y: contain; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState } = React;
+
+/* ============ シンプルなアイコン（lucide-reactの代わりに自前SVG） ============ */
+function IconBase({ children, size = 20, color = "currentColor" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {children}
+    </svg>
+  );
+}
+function Home(p) { return <IconBase {...p}><path d="M3 10.5L12 3l9 7.5" /><path d="M5 9.5V21h14V9.5" /><path d="M9.5 21v-6h5v6" /></IconBase>; }
+function Search(p) { return <IconBase {...p}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></IconBase>; }
+function PlusCircle(p) { return <IconBase {...p}><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></IconBase>; }
+function Trophy(p) { return <IconBase {...p}><path d="M8 4h8v4a4 4 0 0 1-8 0V4z" /><path d="M8 4H4v2a4 4 0 0 0 4 4" /><path d="M16 4h4v2a4 4 0 0 1-4 4" /><path d="M12 12v3" /><path d="M8 20h8" /><path d="M10 15h4v5h-4z" /></IconBase>; }
+function Users(p) { return <IconBase {...p}><circle cx="9" cy="8" r="3" /><path d="M2.5 20c0-3.3 2.9-5.5 6.5-5.5s6.5 2.2 6.5 5.5" /><circle cx="17.5" cy="9.5" r="2.3" /><path d="M15.5 14.7c2.6.2 5.5 1.7 5.5 4.3v1" /></IconBase>; }
+function MapPin(p) { return <IconBase {...p}><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11z" /><circle cx="12" cy="10" r="2.5" /></IconBase>; }
+function Calendar(p) { return <IconBase {...p}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /></IconBase>; }
+function Clock(p) { return <IconBase {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></IconBase>; }
+function ChevronLeft(p) { return <IconBase {...p}><path d="M15 18l-6-6 6-6" /></IconBase>; }
+function Bell(p) { return <IconBase {...p}><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8" /><path d="M10 21a2 2 0 0 0 4 0" /></IconBase>; }
+function Check(p) { return <IconBase {...p}><path d="M20 6L9 17l-5-5" /></IconBase>; }
+function X(p) { return <IconBase {...p}><path d="M18 6L6 18M6 6l12 12" /></IconBase>; }
+function Send(p) { return <IconBase {...p}><path d="M22 2L11 13" /><path d="M22 2l-7 20-4-9-9-4 20-7z" /></IconBase>; }
+function Pencil(p) { return <IconBase {...p}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></IconBase>; }
+function Sparkles(p) { return <IconBase {...p}><path d="M12 3l1.4 4.2L18 9l-4.6 1.8L12 15l-1.4-4.2L6 9l4.6-1.8L12 3z" /><path d="M19 15l.6 1.8L21 18l-1.9.8L19 21l-.6-1.8L17 18l1.9-.8L19 15z" /></IconBase>; }
+function MessageCircle(p) { return <IconBase {...p}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" /></IconBase>; }
+
+const C = {
+  navy: "#16213E",
+  navyLight: "#22315C",
+  orange: "#F2680B",
+  orangeDark: "#D9560A",
+  green: "#2F9E44",
+  greenBg: "#E6F6EA",
+  bg: "#F5F6F3",
+  card: "#FFFFFF",
+  ink: "#1C1F26",
+  steel: "#6B7280",
+  line: "#E4E7EC",
+};
+
+const REGIONS = ["北海道", "東北", "関東", "中部", "近畿", "中国", "四国", "九州"];
+const GENDERS = ["男子", "女子"];
+const GRADE_OPTIONS = ["指定なし", "1年生", "2年生", "3年生"];
+const TEAM_STAGE = ["中学生", "高校生"];
+const REFEREE_OPTIONS = ["応相談", "双方で用意", "こちらで用意可能", "相手にお願いしたい"];
+
+const PREFECTURE_REGION = {
+  "北海道": "北海道",
+  "青森県": "東北", "岩手県": "東北", "宮城県": "東北", "秋田県": "東北", "山形県": "東北", "福島県": "東北",
+  "茨城県": "関東", "栃木県": "関東", "群馬県": "関東", "埼玉県": "関東", "千葉県": "関東", "東京都": "関東", "神奈川県": "関東",
+  "新潟県": "中部", "富山県": "中部", "石川県": "中部", "福井県": "中部", "山梨県": "中部", "長野県": "中部", "岐阜県": "中部", "静岡県": "中部", "愛知県": "中部",
+  "三重県": "近畿", "滋賀県": "近畿", "京都府": "近畿", "大阪府": "近畿", "兵庫県": "近畿", "奈良県": "近畿", "和歌山県": "近畿",
+  "鳥取県": "中国", "島根県": "中国", "岡山県": "中国", "広島県": "中国", "山口県": "中国",
+  "徳島県": "四国", "香川県": "四国", "愛媛県": "四国", "高知県": "四国",
+  "福岡県": "九州", "佐賀県": "九州", "長崎県": "九州", "熊本県": "九州", "大分県": "九州", "宮崎県": "九州", "鹿児島県": "九州", "沖縄県": "九州",
+};
+const PREFECTURES = Object.keys(PREFECTURE_REGION);
+
+function regionOf(prefecture) {
+  return PREFECTURE_REGION[prefecture] || "関東";
+}
+
+const initialTeams = {
+  A: {
+    schoolName: "○○高校",
+    gender: "男子",
+    address: "東京都○○区",
+    region: "関東",
+    stage: "高校生",
+    coach: "山田先生",
+    intro: "週3回活動しています。基礎練習を中心に、対人プレーの経験を積みたいです。",
+    recentResults: "都大会ベスト16（2026年春）",
+  },
+  B: {
+    schoolName: "△△高校",
+    gender: "男子",
+    address: "神奈川県△△市",
+    region: "関東",
+    stage: "高校生",
+    coach: "佐藤先生",
+    intro: "県大会出場を目標に練習しています。実践的な練習試合を希望します。",
+    recentResults: "県大会ベスト8（2026年春）",
+  },
+};
+
+const seedMatches = [
+  {
+    id: "seed-1",
+    ownerTeamId: "other",
+    schoolName: "□□高校",
+    gender: "男子",
+    date: "2026-09-20",
+    startTime: "13:00",
+    endTime: "16:00",
+    venue: "□□高校体育館",
+    prefecture: "千葉県",
+    region: "関東",
+    grade: "指定なし",
+    desiredRegion: "関東",
+    referee: "応相談",
+    numGames: "3試合",
+    otherConditions: "特になし",
+    title: "9月20日に練習試合をしていただける男子高校を募集しています。",
+    message: "初中級レベルのチームを探しています。よろしくお願いします。",
+    status: "open",
+  },
+];
+
+function fmtDate(d) {
+  if (!d) return "";
+  const [y, m, day] = d.split("-");
+  return `${m}/${day}`;
+}
+
+function venuePreview(m) {
+  return `${m.prefecture}（詳しい会場はマッチング成立後に表示されます）`;
+}
+
+function Field({ label, required, children }) {
+  return (
+    <label className="block mb-4">
+      <span className="block text-sm font-medium mb-1" style={{ color: C.ink }}>
+        {label}
+        {required && <span className="ml-1 text-xs font-bold" style={{ color: C.orange }}>*必須</span>}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+const inputStyle = {
+  border: `1px solid ${C.line}`,
+  color: C.ink,
+};
+
+function TextInput(props) {
+  return (
+    <input
+      {...props}
+      style={inputStyle}
+      className="w-full rounded-lg px-3 py-2 text-sm outline-none focus:ring-2"
+    />
+  );
+}
+function TextArea(props) {
+  return (
+    <textarea
+      {...props}
+      style={inputStyle}
+      className="w-full rounded-lg px-3 py-2 text-sm outline-none focus:ring-2"
+    />
+  );
+}
+function Select({ options, ...props }) {
+  return (
+    <select {...props} style={inputStyle} className="w-full rounded-lg px-3 py-2 text-sm outline-none bg-white">
+      {options.map((o) => <option key={o} value={o}>{o}</option>)}
+    </select>
+  );
+}
+
+function Chip({ active, children, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap"
+      style={active
+        ? { background: C.navy, color: "white" }
+        : { background: "white", color: C.steel, border: `1px solid ${C.line}` }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function TicketCard({ match, badge, onClick }) {
+  return (
+    <div
+      onClick={onClick}
+      className="hh-ticket rounded-2xl p-4 mb-3 cursor-pointer active:opacity-80"
+      style={{ background: C.card, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <div className="hh-display text-base font-semibold" style={{ color: C.navy }}>{match.schoolName}</div>
+          <div className="text-xs mt-0.5" style={{ color: C.steel }}>{match.gender}・{match.grade}</div>
+        </div>
+        {badge}
+      </div>
+      <div className="border-t border-dashed my-2" style={{ borderColor: C.line }} />
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: C.ink }}>
+        <span className="flex items-center gap-1"><Calendar size={13} />{fmtDate(match.date)} {match.startTime}〜{match.endTime}</span>
+        <span className="flex items-center gap-1"><MapPin size={13} />{match.prefecture}</span>
+      </div>
+    </div>
+  );
+}
+
+function StatusPill({ status }) {
+  const map = {
+    open: { bg: "#EEF1F7", color: C.navy, text: "募集中" },
+    matched: { bg: C.greenBg, color: C.green, text: "成立済み" },
+    closed: { bg: "#F1F2F4", color: C.steel, text: "終了済み" },
+    pending: { bg: "#FFF3E6", color: C.orangeDark, text: "申込あり" },
+    approved: { bg: C.greenBg, color: C.green, text: "承認済み" },
+    rejected: { bg: "#F1F2F4", color: C.steel, text: "見送り" },
+  };
+  const s = map[status] || map.open;
+  return (
+    <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ background: s.bg, color: s.color }}>
+      {s.text}
+    </span>
+  );
+}
+
+function TeamProfileCard({ team }) {
+  if (!team) {
+    return (
+      <div className="rounded-2xl p-4 text-sm" style={{ background: C.card, color: C.steel }}>
+        チーム情報がありません
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-2xl p-4" style={{ background: C.card }}>
+      <div className="hh-display text-base font-bold mb-1" style={{ color: C.navy }}>{team.schoolName}</div>
+      <div className="text-xs mb-3" style={{ color: C.steel }}>
+        {team.gender}{team.stage ? `・${team.stage}` : ""}{team.region ? `・${team.region}` : ""}
+      </div>
+      {team.recentResults && (
+        <div className="text-sm mb-2" style={{ color: C.ink }}><b>直近の大会成績：</b>{team.recentResults}</div>
+      )}
+      {team.intro && (
+        <div className="text-sm mb-2" style={{ color: C.ink }}>{team.intro}</div>
+      )}
+      {(team.address || team.coach) && (
+        <div className="text-xs mt-2" style={{ color: C.steel }}>
+          {team.address}{team.address && team.coach ? "／" : ""}{team.coach ? `顧問：${team.coach}` : ""}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HandHubApp() {
+  const [currentUser, setCurrentUser] = useState("A");
+  const [view, setView] = useState("home");
+  const [selectedMatchId, setSelectedMatchId] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const [teams, setTeams] = useState(initialTeams);
+  const [matches, setMatches] = useState(seedMatches);
+  const [applications, setApplications] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [editingTeam, setEditingTeam] = useState(false);
+
+  const [filters, setFilters] = useState({ region: "すべて", gender: "すべて", grade: "すべて" });
+  const [applyMessage, setApplyMessage] = useState("");
+  const [chatMessages, setChatMessages] = useState({});
+  const [selectedAppId, setSelectedAppId] = useState(null);
+
+  const myTeam = teams[currentUser];
+
+  function notify(text) {
+    setToast(text);
+    setTimeout(() => setToast(null), 2200);
+  }
+
+  function addNotification(teamId, text) {
+    if (teamId === "other") return;
+    setNotifications((prev) => [{ id: Date.now() + Math.random(), teamId, text, time: new Date() }, ...prev]);
+  }
+
+  function switchUser(id) {
+    setCurrentUser(id);
+    setView("home");
+    setSelectedMatchId(null);
+    setEditingTeam(false);
+  }
+
+  function goTo(v, matchId = null) {
+    setView(v);
+    if (matchId) setSelectedMatchId(matchId);
+    window.scrollTo?.(0, 0);
+  }
+
+  function createMatch(form) {
+    const id = Date.now();
+    const team = teams[currentUser];
+    setMatches((prev) => [
+      ...prev,
+      {
+        id, ownerTeamId: currentUser, schoolName: team.schoolName,
+        status: "open", ...form,
+      },
+    ]);
+    notify("募集を投稿しました");
+    goTo("home");
+  }
+
+  function submitApplication(matchId, message) {
+    const id = Date.now();
+    setApplications((prev) => [...prev, { id, matchId, applicantTeamId: currentUser, message, status: "pending", createdAt: new Date() }]);
+    const match = matches.find((m) => m.id === matchId);
+    addNotification(match.ownerTeamId, `${teams[currentUser].schoolName}から練習試合の申し込みが届きました`);
+    notify("申し込みを送信しました");
+    setApplyMessage("");
+    goTo("search");
+  }
+
+  function approveApplication(app) {
+    const match = matches.find((m) => m.id === app.matchId);
+    setApplications((prev) => prev.map((a) =>
+      a.id === app.id ? { ...a, status: "approved" }
+      : a.matchId === app.matchId ? { ...a, status: "rejected" }
+      : a
+    ));
+    setMatches((prev) => prev.map((m) => m.id === app.matchId ? { ...m, status: "matched" } : m));
+    addNotification(app.applicantTeamId, `${match.schoolName}とのマッチングが成立しました`);
+    addNotification(match.ownerTeamId, `${teams[app.applicantTeamId]?.schoolName || ""}とのマッチングが成立しました`);
+    notify("承認しました。マッチングが成立しました");
+  }
+
+  function rejectApplication(app) {
+    setApplications((prev) => prev.map((a) => a.id === app.id ? { ...a, status: "rejected" } : a));
+    notify("見送りにしました");
+  }
+
+  function closeMatch(matchId) {
+    setMatches((prev) => prev.map((m) => m.id === matchId ? { ...m, status: "closed" } : m));
+    notify("募集を終了しました");
+  }
+
+  function sendChat(appId, text) {
+    if (!text.trim()) return;
+    setChatMessages((prev) => ({
+      ...prev,
+      [appId]: [...(prev[appId] || []), { id: Date.now(), sender: currentUser, text, time: new Date() }],
+    }));
+  }
+
+  function saveTeam(form) {
+    setTeams((prev) => ({ ...prev, [currentUser]: { ...prev[currentUser], ...form } }));
+    setEditingTeam(false);
+    notify("チーム情報を更新しました");
+  }
+
+  const myMatches = matches.filter((m) => m.ownerTeamId === currentUser);
+  const otherMatches = matches.filter((m) => m.ownerTeamId !== currentUser && m.status === "open").filter((m) => {
+    if (filters.region !== "すべて" && m.region !== filters.region) return false;
+    if (filters.gender !== "すべて" && m.gender !== filters.gender) return false;
+    if (filters.grade !== "すべて" && m.grade !== filters.grade) return false;
+    return true;
+  });
+  const myApplications = applications.filter((a) => a.applicantTeamId === currentUser);
+  const incomingApplications = applications.filter((a) => myMatches.some((m) => m.id === a.matchId) && a.status === "pending");
+  const confirmedForMe = applications.filter((a) => {
+    if (a.status !== "approved") return false;
+    const m = matches.find((mm) => mm.id === a.matchId);
+    return a.applicantTeamId === currentUser || m?.ownerTeamId === currentUser;
+  });
+  const myNotifications = notifications.filter((n) => n.teamId === currentUser);
+  const selectedMatch = matches.find((m) => m.id === selectedMatchId);
+  const alreadyApplied = selectedMatch && myApplications.some((a) => a.matchId === selectedMatch.id);
+
+  const selectedApp = applications.find((a) => a.id === selectedAppId);
+  const chatMatch = selectedApp && matches.find((m) => m.id === selectedApp.matchId);
+  const chatOpponentId = chatMatch && (chatMatch.ownerTeamId === currentUser ? selectedApp.applicantTeamId : chatMatch.ownerTeamId);
+  const chatOpponent = chatMatch ? (teams[chatOpponentId] || { schoolName: chatMatch.schoolName }) : null;
+
+  const navItems = [
+    { key: "home", label: "ホーム", icon: Home },
+    { key: "search", label: "探す", icon: Search },
+    { key: "post", label: "募集", icon: PlusCircle },
+    { key: "matching", label: "マッチング", icon: Trophy },
+    { key: "myteam", label: "マイチーム", icon: Users },
+  ];
+
+  return (
+    <div className="min-h-screen flex flex-col" style={{ background: C.bg, fontFamily: "system-ui, sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap');
+        .hh-display { font-family: 'Oswald', system-ui, sans-serif; letter-spacing: 0.01em; }
+        .hh-ticket { position: relative; }
+        .hh-ticket::before, .hh-ticket::after {
+          content: ''; position: absolute; width: 14px; height: 14px;
+          background: ${C.bg}; border-radius: 50%; top: 50%; transform: translateY(-50%);
+        }
+        .hh-ticket::before { left: -7px; }
+        .hh-ticket::after { right: -7px; }
+        .hh-stamp {
+          transform: rotate(-9deg); display: inline-block; border: 3px solid ${C.green};
+          color: ${C.green}; font-family: 'Oswald', sans-serif; font-weight: 700;
+          padding: 4px 14px; border-radius: 8px; letter-spacing: 0.08em;
+        }
+      `}</style>
+
+      <div className="w-full max-w-md mx-auto flex-1 flex flex-col w-full" style={{ maxWidth: 420 }}>
+
+        <div className="px-4 pt-5 pb-3 flex items-center justify-between" style={{ background: C.navy }}>
+          <div className="hh-display text-white text-xl font-bold tracking-wide">HAND HUB</div>
+          <div className="flex rounded-full overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.35)" }}>
+            {["A", "B"].map((id) => (
+              <button
+                key={id}
+                onClick={() => switchUser(id)}
+                className="text-xs font-semibold px-3 py-1"
+                style={currentUser === id ? { background: C.orange, color: "white" } : { color: "rgba(255,255,255,0.75)" }}
+              >
+                {teams[id].schoolName}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="text-center text-xs py-1.5" style={{ background: C.navyLight, color: "rgba(255,255,255,0.85)" }}>
+          デモ版：上のボタンでチームA/チームBを切り替えて2ユーザーの流れを再現できます
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
+
+          {view === "home" && (
+            <div>
+              <div className="hh-display text-lg font-semibold mb-1" style={{ color: C.ink }}>
+                こんにちは、{myTeam.schoolName}さん
+              </div>
+              <div className="text-sm mb-4" style={{ color: C.steel }}>今日も練習試合を探しましょう</div>
+
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                <button onClick={() => goTo("search")} className="rounded-2xl p-4 text-left" style={{ background: C.navy }}>
+                  <Search size={20} color="white" />
+                  <div className="text-white font-semibold mt-2 text-sm">練習試合を探す</div>
+                </button>
+                <button onClick={() => goTo("post")} className="rounded-2xl p-4 text-left" style={{ background: C.orange }}>
+                  <PlusCircle size={20} color="white" />
+                  <div className="text-white font-semibold mt-2 text-sm">練習試合を募集する</div>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 mb-5">
+                <button onClick={() => goTo("post")} className="rounded-xl p-3 text-center" style={{ background: C.card }}>
+                  <div className="hh-display text-xl font-bold" style={{ color: C.navy }}>{myMatches.length}</div>
+                  <div className="text-xs mt-0.5" style={{ color: C.steel }}>自分の募集</div>
+                </button>
+                <button onClick={() => goTo("post")} className="rounded-xl p-3 text-center" style={{ background: C.card }}>
+                  <div className="hh-display text-xl font-bold" style={{ color: C.orangeDark }}>{incomingApplications.length}</div>
+                  <div className="text-xs mt-0.5" style={{ color: C.steel }}>届いている申込</div>
+                </button>
+                <button onClick={() => goTo("matching")} className="rounded-xl p-3 text-center" style={{ background: C.card }}>
+                  <div className="hh-display text-xl font-bold" style={{ color: C.green }}>{confirmedForMe.length}</div>
+                  <div className="text-xs mt-0.5" style={{ color: C.steel }}>成立した試合</div>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1 mb-2">
+                <Bell size={15} color={C.steel} />
+                <span className="text-sm font-semibold" style={{ color: C.ink }}>お知らせ</span>
+              </div>
+              {myNotifications.length === 0 && (
+                <div className="text-sm rounded-xl p-4 text-center" style={{ background: C.card, color: C.steel }}>
+                  まだお知らせはありません
+                </div>
+              )}
+              {myNotifications.slice(0, 5).map((n) => (
+                <div key={n.id} className="text-sm rounded-xl p-3 mb-2" style={{ background: C.card, color: C.ink }}>
+                  {n.text}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {view === "search" && (
+            <div>
+              <div className="hh-display text-lg font-semibold mb-3" style={{ color: C.ink }}>練習試合を探す</div>
+              <div className="flex gap-2 overflow-x-auto pb-3 mb-1">
+                <Select options={["すべて", ...REGIONS]} value={filters.region} onChange={(e) => setFilters({ ...filters, region: e.target.value })} />
+              </div>
+              <div className="flex gap-2 mb-4 flex-wrap">
+                {GENDERS.map((g) => (
+                  <Chip key={g} active={filters.gender === g} onClick={() => setFilters({ ...filters, gender: filters.gender === g ? "すべて" : g })}>{g}</Chip>
+                ))}
+              </div>
+
+              {otherMatches.length === 0 && (
+                <div className="text-sm rounded-xl p-6 text-center" style={{ background: C.card, color: C.steel }}>
+                  条件に合う募集が見つかりません
+                </div>
+              )}
+              {otherMatches.map((m) => (
+                <TicketCard key={m.id} match={m} badge={<StatusPill status={m.status} />} onClick={() => goTo("detail", m.id)} />
+              ))}
+            </div>
+          )}
+
+          {view === "detail" && selectedMatch && (
+            <div>
+              <button onClick={() => goTo("search")} className="flex items-center gap-1 text-sm mb-3" style={{ color: C.steel }}>
+                <ChevronLeft size={16} />戻る
+              </button>
+              <div className="rounded-2xl p-5 mb-4" style={{ background: C.card }}>
+                <div className="hh-display text-xl font-bold mb-1" style={{ color: C.navy }}>{selectedMatch.schoolName}</div>
+                <div className="text-sm mb-3" style={{ color: C.steel }}>{selectedMatch.gender}・{selectedMatch.grade}</div>
+                <div className="text-sm mb-4" style={{ color: C.ink }}>{selectedMatch.title}</div>
+                <div className="grid grid-cols-2 gap-3 text-sm mb-4" style={{ color: C.ink }}>
+                  <div className="flex items-center gap-2"><Calendar size={14} />{fmtDate(selectedMatch.date)}</div>
+                  <div className="flex items-center gap-2"><Clock size={14} />{selectedMatch.startTime}〜{selectedMatch.endTime}</div>
+                  <div className="flex items-center gap-2 col-span-2"><MapPin size={14} />{venuePreview(selectedMatch)}</div>
+                </div>
+                <div className="border-t pt-3 text-sm" style={{ borderColor: C.line, color: C.ink }}>
+                  <div className="mb-1"><b>試合数：</b>{selectedMatch.numGames || "未定"}</div>
+                  <div className="mb-1"><b>審判：</b>{selectedMatch.referee || "応相談"}</div>
+                  <div className="mb-1"><b>その他条件：</b>{selectedMatch.otherConditions || "特になし"}</div>
+                  <div><b>メッセージ：</b>{selectedMatch.message}</div>
+                </div>
+              </div>
+              {selectedMatch.ownerTeamId === currentUser ? (
+                <div className="text-sm text-center" style={{ color: C.steel }}>これはあなたのチームの募集です</div>
+              ) : alreadyApplied ? (
+                <div className="rounded-xl p-3 text-center text-sm font-semibold" style={{ background: C.greenBg, color: C.green }}>申し込み済みです</div>
+              ) : (
+                <button onClick={() => goTo("apply", selectedMatch.id)} className="w-full rounded-xl py-3 text-white font-semibold" style={{ background: C.orange }}>
+                  この募集に申し込む
+                </button>
+              )}
+            </div>
+          )}
+
+          {view === "apply" && selectedMatch && (
+            <div>
+              <button onClick={() => goTo("detail", selectedMatch.id)} className="flex items-center gap-1 text-sm mb-3" style={{ color: C.steel }}>
+                <ChevronLeft size={16} />戻る
+              </button>
+              <div className="hh-display text-lg font-semibold mb-1" style={{ color: C.ink }}>{selectedMatch.schoolName}に申し込む</div>
+              <div className="text-sm mb-4" style={{ color: C.steel }}>{fmtDate(selectedMatch.date)} {selectedMatch.startTime}〜 ／ {selectedMatch.prefecture}</div>
+
+              <div className="hh-display text-sm font-semibold mb-2" style={{ color: C.ink }}>募集チームの詳しい情報</div>
+              <div className="mb-4">
+                <TeamProfileCard team={teams[selectedMatch.ownerTeamId] || {
+                  schoolName: selectedMatch.schoolName,
+                  gender: selectedMatch.gender,
+                  region: selectedMatch.region,
+                }} />
+              </div>
+
+              <Field label="メッセージ">
+                <TextArea rows={4} placeholder={`${fmtDate(selectedMatch.date)}の練習試合を希望します。よろしくお願いします。`} value={applyMessage} onChange={(e) => setApplyMessage(e.target.value)} />
+              </Field>
+              <button
+                onClick={() => submitApplication(selectedMatch.id, applyMessage || `${fmtDate(selectedMatch.date)}の練習試合を希望します。よろしくお願いします。`)}
+                className="w-full rounded-xl py-3 text-white font-semibold flex items-center justify-center gap-2"
+                style={{ background: C.orange }}
+              >
+                <Send size={16} />申し込みを送信する
+              </button>
+            </div>
+          )}
+
+          {view === "post" && (
+            <PostScreen
+              onCancel={() => goTo("home")}
+              onSubmit={createMatch}
+              myMatches={myMatches}
+              applications={applications}
+              teams={teams}
+              onApprove={approveApplication}
+              onReject={rejectApplication}
+              onCloseMatch={closeMatch}
+            />
+          )}
+
+          {view === "matching" && (
+            <div>
+              <div className="hh-display text-lg font-semibold mb-3" style={{ color: C.ink }}>マッチング成立</div>
+              {confirmedForMe.length === 0 && (
+                <div className="text-sm rounded-xl p-6 text-center" style={{ background: C.card, color: C.steel }}>
+                  まだマッチングは成立していません
+                </div>
+              )}
+              {confirmedForMe.map((a) => {
+                const m = matches.find((mm) => mm.id === a.matchId);
+                const opponentId = m.ownerTeamId === currentUser ? a.applicantTeamId : m.ownerTeamId;
+                const opponent = teams[opponentId] || { schoolName: m.schoolName };
+                return (
+                  <div key={a.id} className="rounded-2xl p-4 mb-3" style={{ background: C.card }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="hh-display text-base font-bold" style={{ color: C.navy }}>vs {opponent.schoolName}</div>
+                      <span className="hh-stamp text-xs">MATCH!</span>
+                    </div>
+                    <div className="text-sm space-y-1" style={{ color: C.ink }}>
+                      <div className="flex items-center gap-2"><Calendar size={14} />{fmtDate(m.date)} {m.startTime}〜{m.endTime}</div>
+                      <div className="flex items-center gap-2"><MapPin size={14} />{m.venue}（{m.prefecture}）</div>
+                      <div>試合数：{m.numGames || "未定"}</div>
+                      <div>審判：{m.referee || "応相談"}／顧問：{opponent.coach || "-"}</div>
+                    </div>
+                    <button
+                      onClick={() => { setSelectedAppId(a.id); goTo("chat"); }}
+                      className="w-full rounded-lg py-2 mt-3 text-sm font-semibold flex items-center justify-center gap-1"
+                      style={{ background: C.navy, color: "white" }}
+                    >
+                      <MessageCircle size={15} />チャットを開く
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {view === "chat" && chatMatch && (
+            <ChatScreen
+              opponentName={chatOpponent?.schoolName}
+              matchInfo={`${fmtDate(chatMatch.date)} ${chatMatch.startTime}〜／${chatMatch.venue}`}
+              messages={chatMessages[selectedAppId] || []}
+              currentUser={currentUser}
+              onBack={() => goTo("matching")}
+              onSend={(text) => sendChat(selectedAppId, text)}
+            />
+          )}
+
+          {view === "myteam" && (
+            <MyTeamScreen
+              team={myTeam}
+              editing={editingTeam}
+              onEdit={() => setEditingTeam(true)}
+              onCancel={() => setEditingTeam(false)}
+              onSave={saveTeam}
+              myMatches={myMatches}
+              myApplications={myApplications}
+              confirmedCount={confirmedForMe.length}
+            />
+          )}
+        </div>
+
+        <div className="fixed bottom-0 left-0 right-0 flex justify-center">
+          <div className="w-full flex" style={{ maxWidth: 420, background: "white", borderTop: `1px solid ${C.line}` }}>
+            {navItems.map(({ key, label, icon: Icon }) => {
+              const isActive = view === key;
+              return (
+                <button key={key} onClick={() => goTo(key)} className="flex-1 flex flex-col items-center py-2.5">
+                  <Icon size={20} color={isActive ? C.orange : C.steel} />
+                  <span className="text-xs mt-0.5" style={{ color: isActive ? C.orange : C.steel, fontWeight: isActive ? 600 : 400 }}>{label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {toast && (
+          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 text-sm font-medium text-white px-4 py-2 rounded-full flex items-center gap-2" style={{ background: C.navy }}>
+            <Sparkles size={14} />{toast}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ChatScreen({ opponentName, matchInfo, messages, currentUser, onBack, onSend }) {
+  const [text, setText] = useState("");
+  return (
+    <div>
+      <button onClick={onBack} className="flex items-center gap-1 text-sm mb-3" style={{ color: C.steel }}>
+        <ChevronLeft size={16} />戻る
+      </button>
+      <div className="hh-display text-base font-semibold mb-1" style={{ color: C.ink }}>{opponentName}とのチャット</div>
+      <div className="text-xs mb-4" style={{ color: C.steel }}>{matchInfo}</div>
+
+      <div className="mb-4" style={{ minHeight: 160 }}>
+        {messages.length === 0 && (
+          <div className="text-sm text-center py-8 rounded-xl" style={{ background: C.card, color: C.steel }}>
+            マッチング成立おめでとうございます！<br />日程や持ち物などを相談してみましょう。
+          </div>
+        )}
+        <div className="flex flex-col gap-2">
+          {messages.map((m) => (
+            <div key={m.id} className={m.sender === currentUser ? "flex justify-end" : "flex justify-start"}>
+              <div
+                className="rounded-2xl px-3 py-2 text-sm"
+                style={{
+                  maxWidth: "75%",
+                  background: m.sender === currentUser ? C.orange : C.card,
+                  color: m.sender === currentUser ? "white" : C.ink,
+                }}
+              >
+                {m.text}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="メッセージを入力"
+          style={{ border: `1px solid ${C.line}`, color: C.ink }}
+          className="flex-1 rounded-full px-4 py-2 text-sm outline-none"
+        />
+        <button
+          onClick={() => { if (text.trim()) { onSend(text); setText(""); } }}
+          className="rounded-full p-2.5"
+          style={{ background: C.orange }}
+        >
+          <Send size={16} color="white" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PostScreen({ onCancel, onSubmit, myMatches, applications, teams, onApprove, onReject, onCloseMatch }) {
+  const [form, setForm] = useState({
+    date: "", startTime: "", endTime: "", venue: "", prefecture: "",
+    gender: "男子", grade: "指定なし", referee: "応相談", desiredRegion: "すべて",
+    numGames: "", otherConditions: "", title: "", message: "",
+  });
+  const [tab, setTab] = useState(myMatches.length > 0 ? "list" : "new");
+  const [expandedAppId, setExpandedAppId] = useState(null);
+
+  function set(k, v) { setForm((f) => ({ ...f, [k]: v })); }
+
+  return (
+    <div>
+      <div className="flex gap-2 mb-4">
+        <button onClick={() => setTab("new")} className="flex-1 rounded-lg py-2 text-sm font-semibold"
+          style={tab === "new" ? { background: C.navy, color: "white" } : { background: C.card, color: C.steel }}>
+          新しい募集
+        </button>
+        <button onClick={() => setTab("list")} className="flex-1 rounded-lg py-2 text-sm font-semibold"
+          style={tab === "list" ? { background: C.navy, color: "white" } : { background: C.card, color: C.steel }}>
+          自分の募集（{myMatches.length}）
+        </button>
+      </div>
+
+      {tab === "new" && (
+        <div>
+          <div className="text-xs mb-3" style={{ color: C.orange }}>*必須 のついている項目は必ず入力してください</div>
+          <div className="hh-display text-base font-semibold mb-3" style={{ color: C.ink }}>基本情報</div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="試合日" required><TextInput type="date" value={form.date} onChange={(e) => set("date", e.target.value)} /></Field>
+            <Field label="会場の都道府県" required>
+              <Select options={["選択してください", ...PREFECTURES]} value={form.prefecture || "選択してください"} onChange={(e) => set("prefecture", e.target.value)} />
+            </Field>
+            <Field label="開始時間" required><TextInput type="time" value={form.startTime} onChange={(e) => set("startTime", e.target.value)} /></Field>
+            <Field label="終了予定時間" required><TextInput type="time" value={form.endTime} onChange={(e) => set("endTime", e.target.value)} /></Field>
+          </div>
+          <Field label="会場" required><TextInput placeholder="例：○○高校体育館（マッチング成立まで相手には非公開です）" value={form.venue} onChange={(e) => set("venue", e.target.value)} /></Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="男女" required><Select options={GENDERS} value={form.gender} onChange={(e) => set("gender", e.target.value)} /></Field>
+            <Field label="対象学年"><Select options={GRADE_OPTIONS} value={form.grade} onChange={(e) => set("grade", e.target.value)} /></Field>
+          </div>
+
+          <div className="hh-display text-base font-semibold mt-2 mb-3" style={{ color: C.ink }}>相手チーム条件</div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="審判の有無"><Select options={REFEREE_OPTIONS} value={form.referee} onChange={(e) => set("referee", e.target.value)} /></Field>
+            <Field label="希望地域"><Select options={["すべて", ...REGIONS]} value={form.desiredRegion} onChange={(e) => set("desiredRegion", e.target.value)} /></Field>
+          </div>
+          <Field label="試合数"><TextInput placeholder="例：3試合" value={form.numGames} onChange={(e) => set("numGames", e.target.value)} /></Field>
+          <Field label="その他の条件"><TextArea rows={2} placeholder="例：ボールはこちらで用意します" value={form.otherConditions} onChange={(e) => set("otherConditions", e.target.value)} /></Field>
+
+          <div className="hh-display text-base font-semibold mt-2 mb-3" style={{ color: C.ink }}>募集内容</div>
+          <Field label="タイトル" required><TextInput placeholder="例：9月20日に練習試合をしていただける男子高校を募集しています。" value={form.title} onChange={(e) => set("title", e.target.value)} /></Field>
+          <Field label="詳細メッセージ" required><TextArea rows={3} placeholder="対象チームへのメッセージを入力してください" value={form.message} onChange={(e) => set("message", e.target.value)} /></Field>
+
+          <button
+            onClick={() => onSubmit({ ...form, region: regionOf(form.prefecture) })}
+            disabled={!form.date || !form.startTime || !form.endTime || !form.venue || !form.prefecture || !form.gender || !form.title || !form.message}
+            className="w-full rounded-xl py-3 text-white font-semibold mt-2 disabled:opacity-40"
+            style={{ background: C.orange }}
+          >
+            この内容で募集を投稿する
+          </button>
+        </div>
+      )}
+
+      {tab === "list" && (
+        <div>
+          {myMatches.length === 0 && (
+            <div className="text-sm rounded-xl p-6 text-center" style={{ background: C.card, color: C.steel }}>まだ募集を投稿していません</div>
+          )}
+          {myMatches.map((m) => {
+            const apps = applications.filter((a) => a.matchId === m.id);
+            return (
+              <div key={m.id} className="rounded-2xl p-4 mb-3" style={{ background: C.card }}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="hh-display font-semibold" style={{ color: C.navy }}>{m.title || m.venue}</div>
+                  <StatusPill status={m.status} />
+                </div>
+                <div className="text-xs mb-3" style={{ color: C.steel }}>{fmtDate(m.date)} {m.startTime}〜{m.endTime}・{m.venue}</div>
+                {m.status === "open" && (
+                  <button
+                    onClick={() => onCloseMatch(m.id)}
+                    className="text-xs font-semibold mb-3"
+                    style={{ color: C.steel, textDecoration: "underline" }}
+                  >
+                    この募集を終了する
+                  </button>
+                )}
+                {apps.length === 0 && <div className="text-xs" style={{ color: C.steel }}>まだ申し込みはありません</div>}
+                {apps.map((a) => {
+                  const applicant = teams[a.applicantTeamId] || { schoolName: "不明なチーム" };
+                  return (
+                    <div key={a.id} className="rounded-xl p-3 mt-2" style={{ background: C.bg }}>
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-semibold" style={{ color: C.ink }}>{applicant.schoolName}</div>
+                        <StatusPill status={a.status} />
+                      </div>
+                      <div className="text-xs mt-1" style={{ color: C.steel }}>{applicant.region}・顧問：{applicant.coach}</div>
+                      <div className="text-sm mt-2" style={{ color: C.ink }}>「{a.message}」</div>
+                      <button
+                        onClick={() => setExpandedAppId(expandedAppId === a.id ? null : a.id)}
+                        className="text-xs font-semibold mt-2"
+                        style={{ color: C.navy }}
+                      >
+                        {expandedAppId === a.id ? "閉じる" : "チーム情報を詳しく見る ›"}
+                      </button>
+                      {expandedAppId === a.id && (
+                        <div className="mt-2"><TeamProfileCard team={applicant} /></div>
+                      )}
+                      {a.status === "pending" && (
+                        <div className="flex gap-2 mt-3">
+                          <button onClick={() => onApprove(a)} className="flex-1 rounded-lg py-2 text-sm font-semibold text-white flex items-center justify-center gap-1" style={{ background: C.green }}>
+                            <Check size={14} />承認する
+                          </button>
+                          <button onClick={() => onReject(a)} className="flex-1 rounded-lg py-2 text-sm font-semibold flex items-center justify-center gap-1" style={{ background: "white", color: C.steel, border: `1px solid ${C.line}` }}>
+                            <X size={14} />断る
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MyTeamScreen({ team, editing, onEdit, onCancel, onSave, myMatches, myApplications, confirmedCount }) {
+  const [form, setForm] = useState(team);
+  function set(k, v) { setForm((f) => ({ ...f, [k]: v })); }
+
+  if (editing) {
+    return (
+      <div>
+        <div className="hh-display text-lg font-semibold mb-4" style={{ color: C.ink }}>チーム情報を編集</div>
+        <Field label="学校名"><TextInput value={form.schoolName} onChange={(e) => set("schoolName", e.target.value)} /></Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="男女"><Select options={GENDERS} value={form.gender} onChange={(e) => set("gender", e.target.value)} /></Field>
+          <Field label="学年区分"><Select options={TEAM_STAGE} value={form.stage} onChange={(e) => set("stage", e.target.value)} /></Field>
+          <Field label="地域"><Select options={REGIONS} value={form.region} onChange={(e) => set("region", e.target.value)} /></Field>
+        </div>
+        <Field label="所在地（市区町村まで）"><TextInput placeholder="例：東京都○○区（詳しい住所は不要です）" value={form.address} onChange={(e) => set("address", e.target.value)} /></Field>
+        <Field label="顧問名"><TextInput value={form.coach} onChange={(e) => set("coach", e.target.value)} /></Field>
+        <Field label="直近の大会成績"><TextArea rows={2} placeholder="例：県大会ベスト8（2026年春）" value={form.recentResults} onChange={(e) => set("recentResults", e.target.value)} /></Field>
+        <Field label="チーム紹介"><TextArea rows={3} value={form.intro} onChange={(e) => set("intro", e.target.value)} /></Field>
+        <div className="flex gap-2 mt-2">
+          <button onClick={() => onSave(form)} className="flex-1 rounded-xl py-3 text-white font-semibold" style={{ background: C.orange }}>保存する</button>
+          <button onClick={onCancel} className="flex-1 rounded-xl py-3 font-semibold" style={{ background: "white", color: C.steel, border: `1px solid ${C.line}` }}>キャンセル</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="rounded-2xl p-5 mb-4" style={{ background: C.navy }}>
+        <div className="flex items-center justify-between">
+          <div className="hh-display text-xl font-bold text-white">{team.schoolName}</div>
+          <button onClick={onEdit} className="flex items-center gap-1 text-xs text-white px-2 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }}>
+            <Pencil size={12} />編集
+          </button>
+        </div>
+        <div className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.8)" }}>{team.gender}・{team.stage}</div>
+        {team.recentResults && (
+          <div className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.85)" }}><b>直近の大会成績：</b>{team.recentResults}</div>
+        )}
+        <div className="text-sm mt-3" style={{ color: "rgba(255,255,255,0.9)" }}>{team.intro}</div>
+        <div className="text-xs mt-3" style={{ color: "rgba(255,255,255,0.7)" }}>{team.address}／顧問：{team.coach}</div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-xl p-3 text-center" style={{ background: C.card }}>
+          <div className="hh-display text-xl font-bold" style={{ color: C.navy }}>{myMatches.length}</div>
+          <div className="text-xs" style={{ color: C.steel }}>投稿した募集</div>
+        </div>
+        <div className="rounded-xl p-3 text-center" style={{ background: C.card }}>
+          <div className="hh-display text-xl font-bold" style={{ color: C.orangeDark }}>{myApplications.length}</div>
+          <div className="text-xs" style={{ color: C.steel }}>申し込んだ募集</div>
+        </div>
+        <div className="rounded-xl p-3 text-center" style={{ background: C.card }}>
+          <div className="hh-display text-xl font-bold" style={{ color: C.green }}>{confirmedCount}</div>
+          <div className="text-xs" style={{ color: C.steel }}>成立した試合</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<HandHubApp />);
+</script>
+</body>
+</html>
